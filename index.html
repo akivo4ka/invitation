@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Вопросик</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: #fff;
+      background:
+        radial-gradient(circle at top left, #8b5cf6 0%, transparent 32%),
+        radial-gradient(circle at bottom right, #22c55e 0%, transparent 28%),
+        linear-gradient(135deg, #0f172a, #1e293b);
+    }
+
+    .page {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .center {
+      width: min(760px, 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: clamp(24px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      margin: 0;
+    }
+
+    .image-wrap {
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+
+    .image-wrap img {
+      width: min(440px, 84vw);
+      max-height: 48vh;
+      object-fit: cover;
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      user-select: none;
+      -webkit-user-drag: none;
+      display: block;
+      transition: opacity 0.2s ease;
+    }
+
+    .buttons-row {
+      position: relative;
+      width: 100%;
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+      transition: opacity 0.25s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn:active {
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .left-btn {
+      background: rgba(255, 255, 255, 0.94);
+      color: #111827;
+      position: relative;
+      z-index: 2;
+    }
+
+    .left-btn:hover {
+      background: #fff;
+    }
+
+    .right-btn {
+      position: fixed;
+      background: linear-gradient(135deg, #fb7185, #ef4444);
+      color: #fff;
+      z-index: 10;
+      will-change: left, top;
+    }
+
+    .hint {
+      font-size: 14px;
+      opacity: 0.8;
+      margin: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 520px) {
+      .buttons-row {
+        flex-direction: column;
+        gap: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="center">
+      <h1 class="title">Приедешь в субботу в Отрадное?</h1>
+
+      <div class="image-wrap" id="imageWrap">
+        <img id="mainImage" src="pic1.png" alt="Картинка" />
+      </div>
+
+      <div class="buttons-row" id="buttonsRow">
+        <button class="btn left-btn" id="leftBtn" type="button">Да, конечно!</button>
+        <button class="btn right-btn" id="rightBtn" type="button">Ну не знаю...</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const mainImage = document.getElementById("mainImage");
+    const imageWrap = document.getElementById("imageWrap");
+	const titleEl = document.querySelector('.title');
+    // const hint = document.getElementById("hint");
+
+    const firstImage = "pic1.png";
+    const secondImage = "pic4.jpg";
+
+    let hidden = false;
+    let lastMove = 0;
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(value, max));
+    }
+
+    function captureRightStartPosition() {
+      const rect = rightBtn.getBoundingClientRect();
+      rightBtn.style.left = `${rect.left}px`;
+      rightBtn.style.top = `${rect.top}px`;
+      rightBtn.style.transform = "none";
+    }
+
+    function layoutButtons() {
+      const rowRect = document.getElementById("buttonsRow").getBoundingClientRect();
+      const leftRect = leftBtn.getBoundingClientRect();
+      const rightRect = rightBtn.getBoundingClientRect();
+      const gap = 18;
+
+      const totalWidth = leftRect.width + gap + rightRect.width;
+      const startX = rowRect.left + (rowRect.width - totalWidth) / 2;
+      const y = rowRect.top + (rowRect.height - leftRect.height) / 2;
+
+      leftBtn.style.left = `${startX}px`;
+      leftBtn.style.top = `${y}px`;
+      leftBtn.style.position = "fixed";
+      leftBtn.style.transform = "none";
+
+      rightBtn.style.position = "fixed";
+      rightBtn.style.left = `${startX + leftRect.width + gap}px`;
+      rightBtn.style.top = `${y}px`;
+      rightBtn.style.transform = "none";
+    }
+
+	let startX = 0;
+	let startY = 0;
+
+	function saveRightStartPosition() {
+	  const rect = rightBtn.getBoundingClientRect();
+	  startX = rect.left;
+	  startY = rect.top;
+	}
+
+	function placeRightAtStart() {
+	  rightBtn.style.position = "fixed";
+	  rightBtn.style.left = `${startX}px`;
+	  rightBtn.style.top = `${startY}px`;
+	  rightBtn.style.transform = "none";
+	  rightBtn.style.margin = "0";
+	}
+
+	function isInCorner(rect, margin = 24) {
+	  const nearLeft = rect.left <= margin;
+	  const nearTop = rect.top <= margin;
+	  const nearRight = rect.right >= window.innerWidth - margin;
+	  const nearBottom = rect.bottom >= window.innerHeight - margin;
+
+	  return (
+		(nearLeft && nearTop) ||
+		(nearLeft && nearBottom) ||
+		(nearRight && nearTop) ||
+		(nearRight && nearBottom)
+	  );
+	}
+
+	function resetRightToStart() {
+	  placeRightAtStart();
+	}
+
+	function keepRightButtonSafe() {
+	  if (hidden) return;
+
+	  const rect = rightBtn.getBoundingClientRect();
+	  if (isInCorner(rect)) {
+		resetRightToStart();
+	  }
+	}
+
+	function moveRightButtonAway(clientX, clientY) {
+	  if (hidden) return;
+
+	  const now = performance.now();
+	  if (now - lastMove < 18) return;
+	  lastMove = now;
+
+	  const rect = rightBtn.getBoundingClientRect();
+
+	  if (isInCorner(rect)) {
+		resetRightToStart();
+		return;
+	  }
+
+	  const btnCenterX = rect.left + rect.width / 2;
+	  const btnCenterY = rect.top + rect.height / 2;
+
+	  const dx = btnCenterX - clientX;
+	  const dy = btnCenterY - clientY;
+	  const dist = Math.hypot(dx, dy) || 1;
+
+	  const step = 100 + Math.random() * 100;
+	  const jitterX = (Math.random() - 0.5) * 100;
+	  const jitterY = (Math.random() - 0.5) * 100;
+
+	  let nextX = rect.left + (dx / dist) * step + jitterX;
+	  let nextY = rect.top + (dy / dist) * step + jitterY;
+
+	  const margin = 10;
+	  const maxX = window.innerWidth - rect.width - margin;
+	  const maxY = window.innerHeight - rect.height - margin;
+
+	  nextX = clamp(nextX, margin, maxX);
+	  nextY = clamp(nextY, margin, maxY);
+
+	  rightBtn.style.left = `${nextX}px`;
+	  rightBtn.style.top = `${nextY}px`;
+
+	  requestAnimationFrame(keepRightButtonSafe);
+	}
+
+    function isPointerNearRightButton(clientX, clientY, radius = 75) {
+      const rect = rightBtn.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      return Math.hypot(clientX - cx, clientY - cy) < radius;
+    }
+
+    function changeImage() {
+	  const nextSrc = secondImage + '?v=' + Date.now();
+
+	  mainImage.style.opacity = '0';
+
+	  setTimeout(() => {
+		mainImage.src = nextSrc;
+		mainImage.onload = () => mainImage.style.opacity = '1';
+		setTimeout(() => mainImage.style.opacity = '1', 100);
+	  }, 100);
+    }
+
+    leftBtn.addEventListener("click", () => {
+      hidden = true;
+
+      leftBtn.classList.add("hidden");
+      rightBtn.classList.add("hidden");
+      // hint.classList.add("hidden");
+
+      imageWrap.style.transform = "scale(0.98)";
+      changeImage();
+	  
+	  titleEl.textContent = "Жду тебя в субботу! =)";
+    });
+
+    rightBtn.addEventListener("click", () => {
+      rightBtn.classList.add("hidden");
+	  titleEl.textContent = "Ответ неверный! Приедешь?";
+    });
+
+    document.addEventListener("pointermove", (e) => {
+      if (!hidden && isPointerNearRightButton(e.clientX, e.clientY)) {
+        moveRightButtonAway(e.clientX, e.clientY);
+      }
+    });
+
+    rightBtn.addEventListener("mouseenter", () => {
+      if (!hidden) {
+        moveRightButtonAway(window.innerWidth / 2, window.innerHeight / 2);
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (!hidden) {
+        layoutButtons();
+		saveRightStartPosition();
+        placeRightAtStart();
+      }
+    });
+
+    window.addEventListener("load", () => {
+      requestAnimationFrame(() => {
+        layoutButtons();
+		saveRightStartPosition();
+        placeRightAtStart();
+      });
+    });
+  </script>
+</body>
+</html>
